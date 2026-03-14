@@ -69,6 +69,10 @@ parser.add_argument("--result_dir", type=str, default='finetune_outputs')
 parser.add_argument("--model_suffix", type=str, default='pytorch_models/best')
 parser.add_argument("--dataset", type=str, default='HR Employee Attrition')
 parser.add_argument("--task", type=str, choices=['binclass', 'regression', 'multiclass'], required=True)
+parser.add_argument("--data_dir", type=str, default=None, help='Optional override of fine-tuning data directory')
+parser.add_argument("--checkpoint_dir", type=str, default=None, help='Optional override of TP-BERTa checkpoint directory')
+parser.add_argument("--model_output_dir", type=str, default=None, help='Directory to save the best fine-tuned model weights')
+parser.add_argument("--model_name", type=str, default=None, help='Output model file name without extension when model_output_dir is set')
 parser.add_argument("--lr", type=float, default=1e-5) # fixed learning rate
 parser.add_argument("--weight_decay", type=float, default=0.) # no weight decay in default
 parser.add_argument("--max_epochs", type=int, default=200)
@@ -92,6 +96,11 @@ elif args.task == 'regression':
 elif args.task == 'multiclass':
     from lib import FINETUNE_MUL_DATA as FINETUNE_DATA
     from lib import BIN_CHECKPOINT as CHECKPOINT_DIR
+
+if args.data_dir is not None:
+    FINETUNE_DATA = Path(args.data_dir)
+if args.checkpoint_dir is not None:
+    CHECKPOINT_DIR = Path(args.checkpoint_dir)
 
 
 seed_everything(seed=42)
@@ -236,6 +245,11 @@ for epoch in trange(args.max_epochs, desc='Finetuning'):
         final_test_metric = test_score
         no_improvement = 0
         print("best result")
+        if args.model_output_dir is not None:
+            model_output_dir = Path(args.model_output_dir)
+            model_output_dir.mkdir(parents=True, exist_ok=True)
+            model_name = args.model_name or f'{args.dataset}_tpberta'
+            torch.save(model.state_dict(), model_output_dir / f'{model_name}.pt')
     else:
         no_improvement += 1
     if args.early_stop > 0 and no_improvement == args.early_stop:
